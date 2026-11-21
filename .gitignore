@@ -21,3 +21,4 @@ app_flutter/build/
 # macOS
 .DS_Store
 **/.DS_Store
+.env
