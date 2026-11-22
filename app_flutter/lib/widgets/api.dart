@@ -17,12 +17,15 @@ class Api {
   String? token;
   Future<void> Function()? aoReceber401;
 
-  Api({String? baseUrl})
-      : baseUrl = baseUrl ??
-            const String.fromEnvironment(
-              'API_URL',
-              defaultValue: kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000',
-            );
+ Api({String? baseUrl})
+      : baseUrl = (baseUrl ??
+                const String.fromEnvironment(
+                  'API_URL',
+                  defaultValue:
+                      kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000',
+                ))
+            .trim()
+            .replaceAll(RegExp(r'/+$'), '');
 
   Map<String, String> _cab({
     required bool incluirToken,
@@ -61,11 +64,8 @@ class Api {
     bool incluirToken = true,
   }) async {
     try {
-      final req = http.Request(metodo, Uri.parse('$baseUrl$caminho'));
-      req.headers.addAll(_cab(
-        incluirToken: incluirToken,
-        formulario: formulario != null,
-      ));
+      final rotaLimpa = caminho.startsWith('/') ? caminho : '/$caminho';
+      final req = http.Request(metodo, Uri.parse('${this.baseUrl}$rotaLimpa'));
       if (incluirToken && token != null) {
         req.headers['Authorization'] = 'Bearer $token';
       }
@@ -74,7 +74,7 @@ class Api {
       } else if (corpo != null) {
         req.body = jsonEncode(corpo);
       }
-      final streamed = await req.send().timeout(const Duration(seconds: 6));
+      final streamed = await req.send().timeout(const Duration(seconds: 45));
       final r = await http.Response.fromStream(streamed);
       dynamic json;
       if (r.bodyBytes.isNotEmpty) {
