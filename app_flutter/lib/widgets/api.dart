@@ -19,7 +19,10 @@ class Api {
 
   Api({String? baseUrl})
       : baseUrl = baseUrl ??
-            (kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000');
+            const String.fromEnvironment(
+              'API_URL',
+              defaultValue: kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000',
+            );
 
   Map<String, String> _cab({
     required bool incluirToken,

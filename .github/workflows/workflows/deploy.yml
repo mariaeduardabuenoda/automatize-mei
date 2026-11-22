@@ -23,8 +23,8 @@ jobs:
       - name: Get dependencies
         run: cd app_flutter && flutter pub get
 
-      - name: Build web
-        run: cd app_flutter && flutter build web --release --base-href "/automatize-mei/"
+      - name: Build release APK
+        run: flutter build apk --release --dart-define=API_URL=${{ secrets.API_URL }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
