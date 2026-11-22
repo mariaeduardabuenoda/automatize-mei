@@ -25,14 +25,16 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.29.3'
           channel: 'stable'
 
       - name: Install dependencies
         run: flutter pub get
 
       - name: Build release APK
-        run: flutter build apk --release --dart-define=API_URL=${{ secrets.API_URL }}
+        env:
+          API_URL: ${{ secrets.API_URL }}
+        run: flutter build apk --release --dart-define="API_URL=$API_URL"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
