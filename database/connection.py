@@ -1,21 +1,28 @@
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
 
-from backend.app.core.config import DATABASE_URL
+def get_database_url() -> str:
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise RuntimeError(
+            "A variável de ambiente DATABASE_URL não está configurada."
+        )
+
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+
+    return url
+
+
+database_url = get_database_url()
+
+connect_args = {}
+if "localhost" not in database_url and "127.0.0.1" not in database_url:
+    if "sslmode=" not in database_url:
+        connect_args["sslmode"] = "require"
 
 engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    connect_args={"sslmode": "require"},
+    database_url,
+    connect_args=connect_args,
+    pool_pre_ping=True,  
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
-
-
-def get_db():
-  db = SessionLocal()
-  try:
-    yield db
-  finally:
-    db.close()
