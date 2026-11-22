@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -17,7 +19,7 @@ class Api {
   String? token;
   Future<void> Function()? aoReceber401;
 
- Api({String? baseUrl})
+  Api({String? baseUrl})
       : baseUrl = (baseUrl ??
                 const String.fromEnvironment(
                   'API_URL',
@@ -65,7 +67,13 @@ class Api {
   }) async {
     try {
       final rotaLimpa = caminho.startsWith('/') ? caminho : '/$caminho';
-      final req = http.Request(metodo, Uri.parse('${this.baseUrl}$rotaLimpa'));
+      final uri = Uri.parse('$baseUrl$rotaLimpa');
+      final req = http.Request(metodo, uri);
+
+      req.headers.addAll(_cab(
+        incluirToken: incluirToken,
+        formulario: formulario != null,
+      ));
       if (incluirToken && token != null) {
         req.headers['Authorization'] = 'Bearer $token';
       }
@@ -74,8 +82,10 @@ class Api {
       } else if (corpo != null) {
         req.body = jsonEncode(corpo);
       }
+
       final streamed = await req.send().timeout(const Duration(seconds: 45));
       final r = await http.Response.fromStream(streamed);
+
       dynamic json;
       if (r.bodyBytes.isNotEmpty) {
         try {
@@ -89,9 +99,26 @@ class Api {
       throw ApiErro(_mensagem(r.statusCode, json), statusCode: r.statusCode);
     } on ApiErro {
       rethrow;
-    } catch (_) {
+    } on TimeoutException {
       throw ApiErro(
-          'Sem conexão com o servidor. Confira a internet e o endereço da API.');
+        'O servidor demorou para responder (timeout). Se estiver acordando na nuvem, tente novamente em alguns segundos.',
+      );
+    } on SocketException catch (e) {
+      throw ApiErro(
+        'Sem conexão de rede com $baseUrl (${e.message}).',
+      );
+    } on http.ClientException catch (e) {
+      throw ApiErro(
+        'Falha na requisição HTTP para $baseUrl: ${e.message}',
+      );
+    } on FormatException {
+      throw ApiErro(
+        'Endereço da API inválido: "$baseUrl".',
+      );
+    } catch (e) {
+      throw ApiErro(
+        'Erro inesperado ao conectar ($e).',
+      );
     }
   }
 
@@ -118,7 +145,8 @@ class Api {
     );
   }
 
-  Future<void> redefinirSenha(String email, String codigo, String novaSenha) async {
+  Future<void> redefinirSenha(
+      String email, String codigo, String novaSenha) async {
     await _enviar(
       'POST',
       '/auth/redefinir-senha',
